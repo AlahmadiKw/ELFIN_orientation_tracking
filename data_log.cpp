@@ -131,7 +131,7 @@ int main()
 
     // Set Serial Port data rate and say Hello
     pc.baud( 115200 );
-    pc.printf("Hello World\r\n");
+    // pc.printf("Hello World\r\n");
 
     // Turn on pull up resistors on pushbutton inputs
     sw1.mode(PullUp);
@@ -170,8 +170,8 @@ int main()
 
 void serialSendSensorData(void)
 {
-    printf("Accelerometer:  %1.3f  %1.3f  %1.3f    ", sensorData.accXVal, sensorData.accYVal, sensorData.accZVal);
-    printf("Magnetometer:   %d     %d     %.2f \r\n", sensorData.magXVal, sensorData.magYVal, sensorData.magHeading);
+    printf("%10f  %10f  %10f", sensorData.accXVal, sensorData.accYVal, sensorData.accZVal);
+    printf("%10d  %10d  %10f\r\n", sensorData.magXVal, sensorData.magYVal, sensorData.magHeading);
 }    
 
 
