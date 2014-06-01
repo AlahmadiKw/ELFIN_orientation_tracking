@@ -189,6 +189,12 @@ int main()
         yMagMap = mapData(yMagRaw, minYmag, maxYmag, -1, 1)   /1.0;
         zMagMap = mapData(zMagRaw, minZmag, maxZmag, -1, 1)   /1.0;
 
+        magNor = sqrt( (xMagMap*xMagMap) + (yMagMap*yMagMap) + (zMagMap*zMagMap));
+
+        xMagMap /= magNor;
+        yMagMap /= magNor;
+        zMagMap /= magNor;
+
         sensorData.magXVal = xMagMap;
         sensorData.magYVal = xMagMap;
         sensorData.magZVal = xMagMap;
