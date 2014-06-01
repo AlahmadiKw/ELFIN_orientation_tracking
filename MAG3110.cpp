@@ -87,7 +87,7 @@ void MAG3110::setCalibration(int minX, int maxX, int minY, int maxY )
 
 
 
-void MAG3110::calXYX(PinName pin, int activeValue, int *minX, int *maxX, int *minY, int *maxY, int *minZ, int *maxZ)
+void MAG3110::calXYZ(PinName pin, int activeValue, int *minX, int *maxX, int *minY, int *maxY, int *minZ, int *maxZ)
 {
     DigitalIn calPin(pin);
     int tempXmax, tempXmin, tempYmax, tempYmin, tempZmax, tempZmin, newX, newY, newZ;

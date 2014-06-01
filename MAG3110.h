@@ -137,7 +137,7 @@ public:
      * @param calPin GPIO pinName to use for coordinating the board rotation
      * @param activeValue the GPIO pin value when input asserted
      */    
-     void calXYX(PinName pin, int activeValue, int *minX, int *maxX, int *minY, int *maxY, int *minZ, int *maxZ);
+     void calXYZ(PinName pin, int activeValue, int *minX, int *maxX, int *minY, int *maxY, int *minZ, int *maxZ);
 
 private:
     I2C _i2c;

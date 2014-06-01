@@ -1,5 +1,4 @@
 #include "mbed.h"
-#include "TSISensor.h"
 #include "MMA8451Q.h"
 #include "MAG3110.h"
 
@@ -67,16 +66,6 @@ DigitalIn  sw1(PTC3);
 DigitalIn  sw3(PTC12);
 
 
-//////////////////////////////////////////////////////////////////////
-// Include support for onboard Capacitive Touch Slider
-TSISensor slider;
-
-
-//////////////////////////////////////////////////////////////////////
-// Include support for analog inputs
-AnalogIn  lightSense(PTE22);
-
-
 /////////////////////////////////////////////////////////////////////
 // Include support for MMA8451Q Acceleromoter
 #define MMA8451_I2C_ADDRESS (0x1d<<1)
@@ -86,6 +75,32 @@ MMA8451Q acc(PTE25, PTE24, MMA8451_I2C_ADDRESS);
 /////////////////////////////////////////////////////////////////////
 // Include support for MAG3110 Magnetometer
 MAG3110 mag(PTE25, PTE24);
+int xMagRaw;
+int yMagRaw;
+int zMagRaw;
+
+int minXmag;
+int maxXmag;
+int minYmag;
+int maxYmag;
+int minZmag;
+int maxZmag;
+
+float xMagMap;
+float yMagMap;
+float zMagMap;
+
+float magNor;
+
+float xMagNor;
+float yMagNor;
+float zMagNor;
+
+int tempXmax, tempXmin, tempYmax, tempYmin, tempZmax, tempZmin, newX, newY, newZ;
+
+// moved calibration from class library to here because for some reason the class method is not functioning
+void calibrateXYZ(PinName pin, int activeValue, int *minX, int *maxX, int *minY, int *maxY, int *minZ, int *maxZ);
+
 
 
 /////////////////////////////////////////////////////////////////////
@@ -97,9 +112,9 @@ Ticker heartBeat;
 /////////////////////////////////////////////////////////////////////
 // Structure to hold FRDM-KL46Z sensor and input data
 struct KL46_SENSOR_DATA {
-    int     magXVal;
-    int     magYVal;
-    float   magHeading;
+    float     magXVal;
+    float     magYVal;
+    float     magZVal;
     
     float   accXVal;
     float   accYVal;
@@ -115,6 +130,18 @@ void serialSendSensorData(void);
 /////////////////////////////////////////////////////////////////////
 // Prototype for LED flash routine
 void ledFlashTick(void);
+
+/////////////////////////////////////////////////////////////////////
+// Map function (same one as arduino)
+float mapData(int val, int in_min, int in_max, float out_min, float out_max);
+
+
+// function [ output ] = mapData( data, in_min, in_max, out_min, out_max)
+// %UNTITLED Summary of this function goes here
+// %   Detailed explanation goes here
+//  output = (data-in_min).* (out_max - out_min) / (in_max - in_min) + out_min;
+
+// end
 
 
 /////////////////////////////////////////////////////////////////////
@@ -141,9 +168,10 @@ int main()
     pc.printf("Press and release SW1, rotate the board 360 degrees.\r\n");
     pc.printf("Then press and release SW1 to complete the calibration process.\r\n");
 
-    mag.calXY(PTC3, 0);
+    calibrateXYZ(PTC3, 0, &minXmag, &maxXmag, &minYmag, &maxYmag, &minZmag, &maxZmag);
 
     pc.printf("Calibration complete.\r\n");
+    pc.printf("%10d %10d %10d %10d %10d %10d\r\n", minXmag, maxXmag, minYmag, maxYmag, minZmag, maxZmag);
 
 
     // Loop forever - read and update sensor data and print to console.    
@@ -153,15 +181,22 @@ int main()
         sensorData.accYVal = acc.getAccY();
         sensorData.accZVal = acc.getAccZ();
 
-        sensorData.magXVal = mag.readVal(MAG_OUT_X_MSB);
-        sensorData.magYVal = mag.readVal(MAG_OUT_Y_MSB);
-        sensorData.magHeading = mag.getHeading();
-                
+        xMagRaw = mag.readVal(MAG_OUT_X_MSB);
+        yMagRaw = mag.readVal(MAG_OUT_Y_MSB);
+        zMagRaw = mag.readVal(MAG_OUT_Z_MSB);
+
+        xMagMap = mapData(xMagRaw, minXmag, maxXmag, -1, 1)   /1.0;
+        yMagMap = mapData(yMagRaw, minYmag, maxYmag, -1, 1)   /1.0;
+        zMagMap = mapData(zMagRaw, minZmag, maxZmag, -1, 1)   /1.0;
+
+        sensorData.magXVal = xMagMap;
+        sensorData.magYVal = xMagMap;
+        sensorData.magZVal = xMagMap;
+
         serialSendSensorData();
         
         // Blink red LED (loop running)
         redLED = !redLED;
-
 
         wait(0.01);
     }  
@@ -170,8 +205,9 @@ int main()
 
 void serialSendSensorData(void)
 {
-    printf("%10f  %10f  %10f", sensorData.accXVal, sensorData.accYVal, sensorData.accZVal);
-    printf("%10d  %10d  %10f\r\n", sensorData.magXVal, sensorData.magYVal, sensorData.magHeading);
+    printf("%10f  %10f  %10f      ", sensorData.accXVal, sensorData.accYVal, sensorData.accZVal);
+    printf("%10f  %10f  %10f\r\n", sensorData.magXVal, sensorData.magYVal, sensorData.magZVal);
+    // printf("%10d  %10d  %10d\r\n", xMagRaw, yMagRaw, zMagRaw);
 }    
 
 
@@ -180,3 +216,46 @@ void ledFlashTick(void)
     greenLED = !greenLED;
 }
 
+float mapData(int val, int in_min, int in_max, float out_min, float out_max){
+    float result = (float)(val-in_min) * (out_max-out_min) / (float)(in_max-in_min) + out_min;
+    return result;
+}
+
+void calibrateXYZ(PinName pin, int activeValue, int *minX, int *maxX, int *minY, int *maxY, int *minZ, int *maxZ)
+{
+    DigitalIn calPin(pin);
+    
+    // Wait for Button Press and Release before beginning calibration
+    while(calPin != activeValue) {}
+    while(calPin == activeValue) {}
+
+
+    // Read initial values of magnetomoter - read it here to create a slight delay for calPin to settle
+    tempXmax = mag.readVal(MAG_OUT_X_MSB);
+    tempXmin = tempXmax;
+    tempYmax = tempYmin = mag.readVal(MAG_OUT_Y_MSB);
+    tempYmax = tempYmax;
+    tempZmax = tempZmin = mag.readVal(MAG_OUT_Z_MSB);
+    tempZmax = tempZmax;
+
+    // Update min and max values until calPin asserted again
+    while(calPin != activeValue) {
+        newX = mag.readVal(MAG_OUT_X_MSB);
+        newY = mag.readVal(MAG_OUT_Y_MSB);
+        newZ = mag.readVal(MAG_OUT_Z_MSB);
+        // printf("test %d \r\n", tempXmax);
+        if (newX > tempXmax) tempXmax = newX;
+        if (newX < tempXmin) tempXmin = newX;
+        if (newY > tempYmax) tempYmax = newY;
+        if (newY < tempYmin) tempYmin = newY;
+        if (newZ > tempZmax) tempZmax = newZ;
+        if (newZ < tempZmin) tempZmin = newZ;
+    }
+
+    *minX = tempXmin;
+    *maxX = tempXmax;
+    *minY = tempYmin;
+    *maxY = tempYmax;
+    *minZ = tempZmin;
+    *maxZ = tempZmax;
+}
