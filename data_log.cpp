@@ -2,50 +2,9 @@
 #include "MMA8451Q.h"
 #include "MAG3110.h"
 
-
-// This project has been created to bring together the libraries required to support
-// the hardware and sensors found on the Freescale FRDM-KL46Z board.  The following
-// libraries are included and exercised in this project:
-//
-//  mbed (source: official mbed library)
-//      Serial:
-//          Serial console routed through the mbed interface
-//              PTA2 / UART0_TX = TX Signal - also on Arduino pin D1
-//              PTA1 / UART0_RX = RX Signal - also on Arduino pin D0
-//
-//      DigitalOut:
-//          GPIO to drive onboard LEDs
-//              PTD5 / GPIO = LED1 - drive low to turn on LED - also on Arduino pin D13
-//              PTE29 / GPIO = LED2 - drive low to turn on LED
-//
-//      DigitalIn:
-//          GPIO to monitor the two onboard push buttons
-//              PTC3 / GPIO = SW1 - low input = button pressed
-//              PTC12 / GPIO = SW3 - low input = button pressed
-// 
-//      AnalogIn:
-//          ADC channel to monitor ambient light sensor
-//              PTE22 / ADC = Light Sensor - higher value = darker
-//
-//  TSI (source: http://mbed.org/users/emilmont/code/TSI/ )
-//      Capacitive Touch library to support the onboard Touch-Slider
-//
-//  FRDM_MMA8451Q (source: http://mbed.org/users/clemente/code/FRDM_MMA8451Q/ )
-//      Freescale MMA8451 Accelerometer connected on I2C0
-//          PTE24 / I2C0_SCL = I2C bus for communication (shared with MAG3110)
-//          PTE25 / I2C0_SDA =  I2C bus for communication (shared with MAG3110)
-//          PTC5 / INT1_ACCEL = INT1 output of MMA8451Q
-//          PTD1 / INT2_ACCEL = INT2 output of MMA8451Q (shared with MAG3110)
-//
-//  MAG3110 (source: http://mbed.org/users/mmaas/code/MAG3110/)
-//            (based on: http://mbed.org/users/SomeRandomBloke/code/MAG3110/)
-//      Freescale MAG3110 Magnetomoter connected on I2C0
-//          PTE24 / I2C0_SCL = I2C bus for communication (shared with MMA8451)
-//          PTE25 / I2C0_SDA =  I2C bus for communication (shared with MMA8451)
-//          PTD1 / INT1_MAG / INT2_ACCEL = INT1 output of MAG3110 (shared with MMA8451)
-//
-
-
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // Include support for USB Serial console
@@ -70,37 +29,55 @@ DigitalIn  sw3(PTC12);
 // Include support for MMA8451Q Acceleromoter
 #define MMA8451_I2C_ADDRESS (0x1d<<1)
 MMA8451Q acc(PTE25, PTE24, MMA8451_I2C_ADDRESS);
+float xAccRaw = 0 ;
+float yAccRaw = 0;
+float zAccRaw = 0;
+
+float xAccFiltered = 0;;
+float yAccFiltered = 0;
+float zAccFiltered = 0;
+
+float xAccFilteredOld = 0;
+float yAccFilteredOld = 0;
+float zAccFilteredOld = 0;
+
+float xAcc, yAcc, zAcc;
 
 
 /////////////////////////////////////////////////////////////////////
 // Include support for MAG3110 Magnetometer
 MAG3110 mag(PTE25, PTE24);
-int xMagRaw;
-int yMagRaw;
-int zMagRaw;
+int xMagRaw =0;
+int yMagRaw =0;
+int zMagRaw =0;
 
-int minXmag;
-int maxXmag;
-int minYmag;
-int maxYmag;
-int minZmag;
-int maxZmag;
+float xMagFiltered = 0;
+float yMagFiltered = 0;
+float zMagFiltered = 0;
 
-float xMagMap;
-float yMagMap;
-float zMagMap;
+float xMagFilteredOld = 0;
+float yMagFilteredOld = 0;
+float zMagFilteredOld = 0;
 
+int minXmag, maxXmag, minYmag, maxYmag, minZmag, maxZmag;
+float xMagMap, yMagMap, zMagMap;
 float magNor;
+float xMag, yMag, zMag;
 
-float xMagNor;
-float yMagNor;
-float zMagNor;
 
 int tempXmax, tempXmin, tempYmax, tempYmin, tempZmax, tempZmin, newX, newY, newZ;
+
 
 // moved calibration from class library to here because for some reason the class method is not functioning
 void calibrateXYZ(PinName pin, int activeValue, int *minX, int *maxX, int *minY, int *maxY, int *minZ, int *maxZ);
 
+void processAcc();
+void processMag();
+
+
+/////////////////////////////////////////////////////////////////////
+// low pass filter
+float alpha = 0.4; 
 
 
 /////////////////////////////////////////////////////////////////////
@@ -111,15 +88,8 @@ Ticker heartBeat;
 
 /////////////////////////////////////////////////////////////////////
 // Structure to hold FRDM-KL46Z sensor and input data
-struct KL46_SENSOR_DATA {
-    float     magXVal;
-    float     magYVal;
-    float     magZVal;
-    
-    float   accXVal;
-    float   accYVal;
-    float   accZVal;
-} sensorData;
+float     pitch, roll, yaw;
+
     
 
 /////////////////////////////////////////////////////////////////////
@@ -133,7 +103,7 @@ void ledFlashTick(void);
 
 /////////////////////////////////////////////////////////////////////
 // Map function (same one as arduino)
-float mapData(int val, int in_min, int in_max, float out_min, float out_max);
+float mapData(float val, int in_min, int in_max, float out_min, float out_max);
 
 
 // function [ output ] = mapData( data, in_min, in_max, out_min, out_max)
@@ -177,33 +147,19 @@ int main()
     // Loop forever - read and update sensor data and print to console.    
     while(1)
     {   
-        sensorData.accXVal = acc.getAccX();
-        sensorData.accYVal = acc.getAccY();
-        sensorData.accZVal = acc.getAccZ();
-
-        xMagRaw = mag.readVal(MAG_OUT_X_MSB);
-        yMagRaw = mag.readVal(MAG_OUT_Y_MSB);
-        zMagRaw = mag.readVal(MAG_OUT_Z_MSB);
-
-        xMagMap = mapData(xMagRaw, minXmag, maxXmag, -1, 1)   /1.0;
-        yMagMap = mapData(yMagRaw, minYmag, maxYmag, -1, 1)   /1.0;
-        zMagMap = mapData(zMagRaw, minZmag, maxZmag, -1, 1)   /1.0;
-
-        magNor = sqrt( (xMagMap*xMagMap) + (yMagMap*yMagMap) + (zMagMap*zMagMap));
-
-        xMagMap /= magNor;
-        yMagMap /= magNor;
-        zMagMap /= magNor;
-
-        sensorData.magXVal = xMagMap;
-        sensorData.magYVal = xMagMap;
-        sensorData.magZVal = xMagMap;
+        processAcc();
+        processMag();
+        pitch = atan2(  -xAcc ,   sqrt(pow(yAcc,2)+pow(zAcc,2))) *180/M_PI;
+        roll  = atan2(   yAcc ,   sqrt(pow(xAcc,2)+pow(zAcc,2))) *180/M_PI; 
+        // theta roll , phi pitch 
+        yaw= atan2( (-yMag*cos(roll) + zMag*sin(roll) ) , 
+                    xMag*cos(pitch) + yMag*sin(pitch)*sin(roll) - zMag*cos(roll)*sin(pitch) )
+             *180/M_PI;
 
         serialSendSensorData();
         
         // Blink red LED (loop running)
         redLED = !redLED;
-
         wait(0.01);
     }  
 }
@@ -211,8 +167,7 @@ int main()
 
 void serialSendSensorData(void)
 {
-    printf("%10f  %10f  %10f      ", sensorData.accXVal, sensorData.accYVal, sensorData.accZVal);
-    printf("%10f  %10f  %10f\r\n", sensorData.magXVal, sensorData.magYVal, sensorData.magZVal);
+    printf("%10f  %10f  %10f      \r\n", roll, pitch, yaw);
     // printf("%10d  %10d  %10d\r\n", xMagRaw, yMagRaw, zMagRaw);
 }    
 
@@ -222,7 +177,7 @@ void ledFlashTick(void)
     greenLED = !greenLED;
 }
 
-float mapData(int val, int in_min, int in_max, float out_min, float out_max){
+float mapData(float val, int in_min, int in_max, float out_min, float out_max){
     float result = (float)(val-in_min) * (out_max-out_min) / (float)(in_max-in_min) + out_min;
     return result;
 }
@@ -264,4 +219,61 @@ void calibrateXYZ(PinName pin, int activeValue, int *minX, int *maxX, int *minY,
     *maxY = tempYmax;
     *minZ = tempZmin;
     *maxZ = tempZmax;
+}
+
+void processAcc(){
+    // Process acc data 
+    xAccRaw = acc.getAccX();
+    yAccRaw = acc.getAccY();
+    zAccRaw = acc.getAccZ();
+
+    xAccFiltered = xAccFilteredOld + alpha * (xAccRaw - xAccFilteredOld);
+    yAccFiltered = yAccFilteredOld + alpha * (yAccRaw - yAccFilteredOld);
+    zAccFiltered = zAccFilteredOld + alpha * (zAccRaw - zAccFilteredOld);
+
+    xAccFilteredOld = xAccFiltered;
+    yAccFilteredOld = yAccFiltered;
+    zAccFilteredOld = zAccFiltered;
+
+    xAcc = xAccFiltered;
+    yAcc = yAccFiltered;
+    zAcc = zAccFiltered;
+}
+
+void processMag(){
+    // Process mag data 
+    xMagRaw = mag.readVal(MAG_OUT_X_MSB);
+    yMagRaw = mag.readVal(MAG_OUT_Y_MSB);
+    zMagRaw = mag.readVal(MAG_OUT_Z_MSB);
+
+    xMagFiltered = xMagFilteredOld + alpha * (xMagRaw - xMagFilteredOld);
+    yMagFiltered = yMagFilteredOld + alpha * (yMagRaw - yMagFilteredOld);
+    zMagFiltered = zMagFilteredOld + alpha * (zMagRaw - zMagFilteredOld);
+
+    xMagFilteredOld = xMagFiltered;
+    yMagFilteredOld = yMagFiltered;
+    zMagFilteredOld = zMagFiltered;
+
+    xMagMap = mapData(xMagFiltered, minXmag, maxXmag, -1, 1)   /1.0;
+    yMagMap = mapData(yMagFiltered, minYmag, maxYmag, -1, 1)   /1.0;
+    zMagMap = mapData(zMagFiltered, minZmag, maxZmag, -1, 1)   /1.0;
+
+    magNor = sqrt( (xMagMap*xMagMap) + (yMagMap*yMagMap) + (zMagMap*zMagMap));
+
+    xMagMap /= magNor;
+    yMagMap /= magNor;
+    zMagMap /= magNor;
+
+    xMag = xMagMap;
+    yMag = yMagMap;
+    zMag = zMagMap;
+
+        // recalibrate in case 
+    if (xMagFiltered>maxXmag) {maxXmag = xMagFiltered;}
+    if (yMagFiltered>maxYmag) {maxYmag = yMagFiltered;}
+    if (zMagFiltered>maxZmag) {maxZmag = zMagFiltered;}
+
+    if (xMagFiltered<minXmag) {minXmag = xMagFiltered;}
+    if (yMagFiltered<minYmag) {minYmag = yMagFiltered;}
+    if (zMagFiltered<minZmag) {minZmag = zMagFiltered;}
 }
