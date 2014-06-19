@@ -17,6 +17,7 @@ from collections import deque
 from matplotlib import pyplot as plt
 from processData import ProcessData
 from math import cos, sin, pi, copysign
+import argparse
 
 import matplotlib.cbook as cbook
 
@@ -211,11 +212,20 @@ class PolarPlot:
 
 # main() function
 def main():
-	if(len(sys.argv) != 3):
-		print 'Example usage: python showdata.py "/dev/tty.usbmodem411"'
-		exit(1)
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument("portname", help="name of portname (com* for windows or /dev/tty.usbmodem* for mac)",
+	                    type=str)
+	parser.add_argument("--output", help="save data to OUTPUT",
+                    type=str)
+	args = parser.parse_args()
+	print args.portname
+	out_file = ''
+	if args.output:
+		out_file = args.output
+
 	#strPort = '/dev/tty.usbserial-A7006Yqh'
-	strPort = sys.argv[1];
+	strPort = args.portname;
 
 	# initialize raw data processing 
 	sensor = ProcessData()
@@ -224,35 +234,77 @@ def main():
 	print 'plotting data...'
 
 	# open serial port
-	# ser = serial.Serial(port = strPort, baudrate = 9600, timeout= 2) 
-	# line = ser.readline()   # this is NEEDED before writing tx 
-	# nbytes = ser.write("tx".encode('ascii'))
+	ser = serial.Serial(port = strPort, baudrate = 9600, timeout= 2) 
+	line = ser.readline()   # this is NEEDED before writing tx 
+	nbytes = ser.write("tx".encode('ascii'))
 
 
 
 	# whichPlot = 'polar'/'cartesian' 
-	whichPlot = sys.argv[2]; 
-	if (whichPlot == 'cartesian'):
-		# plot parameters
-		angles = AngLesbuf(100)
-		anglesPlot = AnglesPlot(angles)
-		flag = True
-	elif (whichPlot == 'polar'):
-		polar = PolarPlot()
-		flag = False
-	else:
-		print 'wrong arguments (polar/cartesian)'
-		exit(1)
+	# whichPlot = sys.argv[2]; 
+	# if (whichPlot == 'cartesian'):
+	# 	# plot parameters
+	# 	angles = AngLesbuf(100)
+	# 	anglesPlot = AnglesPlot(angles)
+	# 	flag = True
+	# elif (whichPlot == 'polar'):
+	# 	polar = PolarPlot()
+	# 	flag = False
+	# else:
+	# 	print 'wrong arguments (polar/cartesian)'
+	# 	exit(1)
 
-	
+	polar = PolarPlot()
+	lines = []
 
-	# while True:
-	# 	try:
-	# 		if ser.readable(): 
-	# 			line = ser.readline()
-	# 			# print line 
+	while True:
+		try:
+			if ser.readable(): 
+				line = ser.readline()
+				# print line 
+				data = [float(val) for val in line.split(',')]
+				# print data
+				if(len(data)==9):
+					(pitch, roll, yaw) = sensor.process(data[3:len(data)])
+					signalStrength = data[0]
+					# if flag:
+					# 	angles.add([pitch, roll, yaw])
+					# 	anglesPlot.update(angles)
+					# else:
+					polar.update(signalStrength, yaw)
+					if out_file:
+						fileline = ' '.join([str(val) for val in data])
+						lines.append(fileline)
+		except ValueError:
+			if not line: 
+				userInput = raw_input('receive data again? or else exit (y/n)? ')
+				if userInput.lower() == 'y':
+					polar.xdata = []
+					polar.ydata = []
+					nbytes = ser.write("tx".encode('ascii'))
+				else:
+					print 'exiting loop'
+					break
+			else: 
+				print 'bad data', line
+		except KeyboardInterrupt:
+			print 'exiting'
+			break
+
+	if out_file:
+		lines = '\n'.join(lines)
+	with open(out_file, 'w') as f:
+		f.writelines(lines)
+
+
+
+	# DEBUGING CODE
+	# sensor = ProcessData()
+	# in_file = sys.argv[1]
+	# with open(in_file) as in_f:
+	# 	for line in in_f: 
+	# 		try:
 	# 			data = [float(val) for val in line.split(',')]
-	# 			# print data
 	# 			if(len(data)==9):
 	# 				(pitch, roll, yaw) = sensor.process(data[3:len(data)])
 	# 				signalStrength = data[0]
@@ -261,48 +313,12 @@ def main():
 	# 					anglesPlot.update(angles)
 	# 				else:
 	# 					polar.update(signalStrength, yaw)
-	# 		# sleep(.06)
-	# 	except ValueError:
-	# 		if not line: 
-	# 			userInput = raw_input('receive data again? or else exit (y/n)\n')
-	# 			if userInput.lower() == 'y':
-	# 				polar.xdata = []
-	# 				polar.ydata = []
-	# 				nbytes = ser.write("tx".encode('ascii'))
-	# 			else:
-	# 				print 'exiting loop'
-	# 				break
-	# 		else: 
-	# 			print 'bad data', line
-	# 	except KeyboardInterrupt:
-	# 		print 'exiting'
-	# 		break
-
-
-
-
-
-	# DEBUGING CODE
-	sensor = ProcessData()
-	in_file = sys.argv[1]
-	with open(in_file) as in_f:
-		for line in in_f: 
-			try:
-				data = [float(val) for val in line.split(',')]
-				if(len(data)==9):
-					(pitch, roll, yaw) = sensor.process(data[3:len(data)])
-					signalStrength = data[0]
-					if flag:
-						angles.add([pitch, roll, yaw])
-						anglesPlot.update(angles)
-					else:
-						polar.update(signalStrength, yaw)
-			except ValueError:
-				print 'bogus data'
-			except (KeyboardInterrupt,SystemExit):
-				print 'exiting'
-				# plt.close('all')
-				break
+	# 		except ValueError:
+	# 			print 'bogus data'
+	# 		except (KeyboardInterrupt,SystemExit):
+	# 			print 'exiting'
+	# 			# plt.close('all')
+	# 			break
 
 
 

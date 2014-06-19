@@ -2,6 +2,7 @@ import sys, serial
 from math import *
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 
 class ProcessData:
@@ -81,36 +82,45 @@ class ProcessData:
 		return (self.pitch, self.roll, self.yaw)
 
 if __name__ == '__main__':
-	in_file = sys.argv[1]
-	out_file = sys.argv[2]
+	# in_file = sys.argv[1]
+	# out_file = sys.argv[2]
 
-	sensor = ProcessData()
-	line_out = []
-	with open(in_file) as in_f:
-		with open(out_file, 'w') as out_f:
-			for line in in_f:
-				values = [float(val) for val in line.split(',')]
-				(pitch, roll, yaw) = sensor.process(values[3:len(values)])
-				final = [str(val) for val in [pitch, roll, yaw]]
-				line_out.extend(final)
-				line_out = ' '.join(line_out)
-				line_out += '\n'
-				out_f.write(line_out)
-				line_out = []
+	# sensor = ProcessData()
+	# line_out = []
+	# with open(in_file) as in_f:
+	# 	with open(out_file, 'w') as out_f:
+	# 		for line in in_f:
+	# 			values = [float(val) for val in line.split(',')]
+	# 			(pitch, roll, yaw) = sensor.process(values[3:len(values)])
+	# 			final = [str(val) for val in [pitch, roll, yaw]]
+	# 			line_out.extend(final)
+	# 			line_out = ' '.join(line_out)
+	# 			line_out += '\n'
+	# 			out_f.write(line_out)
+	# 			line_out = []
 
 
-	soa =np.array( [0,0,5,10]) 
-	# X,Y,U,V = zip(*soa)
-	(X, Y, U, V) = soa.tolist() 
-	print X,Y,U,V 
-	plt.figure()
-	plt.grid(b=True)
-	ax = plt.gca()
-	ax.quiver(X,Y,U,V,angles='xy',scale_units='xy',scale=1)
-	ax.set_xlim([-20,20])
-	ax.set_ylim([-20,20])
-	plt.draw()
-	plt.show()
+	# soa =np.array( [0,0,5,10]) 
+	# # X,Y,U,V = zip(*soa)
+	# (X, Y, U, V) = soa.tolist() 
+	# print X,Y,U,V 
+	# plt.figure()
+	# plt.grid(b=True)
+	# ax = plt.gca()
+	# ax.quiver(X,Y,U,V,angles='xy',scale_units='xy',scale=1)
+	# ax.set_xlim([-20,20])
+	# ax.set_ylim([-20,20])
+	# plt.draw()
+	# plt.show()
+	parser = argparse.ArgumentParser()
+	parser.add_argument("portname", help="name of portname (com for windows or /dev/tty.usbmodem for mac)",
+	                    type=str)
+	parser.add_argument("--output", help="save data to file",
+                    type=str)
+	args = parser.parse_args()
+	print args.portname
+	if args.output=='mak':
+		print "mak mak mak"
 
 
 
