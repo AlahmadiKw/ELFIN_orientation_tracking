@@ -1,9 +1,11 @@
 ################################################################################
 # showdata.py
 #
-# Display analog data from Arduino using Python (matplotlib)
+# plots magnetometer data 
+#
 # 
-# electronut.in
+# real time plotting is credited to electronut.in:
+# https://gist.github.com/electronut/5641933
 #
 ################################################################################
 
@@ -117,7 +119,7 @@ class PolarPlot:
 		                                                 lat_minmax = (0, np.inf),
 		                                                 )
 
-		grid_locator1 = angle_helper.LocatorDMS(12)
+		grid_locator1 = angle_helper.LocatorDMS(24)
 		# Find a grid values appropriate for the coordinate (degree,
 		# minute, second).
 
@@ -148,26 +150,62 @@ class PolarPlot:
 		temp =  self.ax1.set_title('Signal strength & heading polar plots')
 		temp.set_y(1.05) 
 
-		self.fig.add_subplot(self.ax1)
-
-
-		self.quiverLine = self.ax1.quiver(0,0,50,50,angles='xy',scale_units='xy',scale=1)
-		bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
-		self.annotation = self.ax1.annotate('init',size=20, xy=(50+5, 50+5), bbox = bbox_props)
-
-		self.ax1.set_aspect(1.)
-		self.ax1.set_xlim(-150, 150)
-		self.ax1.set_ylim(-150, 150)
 
 		self.ax1.grid(True)
+
+		self.ax = self.fig.add_subplot(self.ax1)
+		self.ax1.spines['left'].set_position('center')
+		self.ax1.spines['right'].set_color('red')
+		self.ax1.spines['bottom'].set_position('center')
+		self.ax1.spines['top'].set_color('none')
+		self.ax1.spines['left'].set_smart_bounds(True)
+		self.ax1.spines['bottom'].set_smart_bounds(True)
+		self.ax1.xaxis.set_ticks_position('bottom')
+		self.ax1.yaxis.set_ticks_position('left')
+		self.ax1.axhline(linewidth=2, color='blue')
+		self.ax1.axvline(linewidth=2, color='blue')
+
+		ticks = np.linspace(0, 255, 6)
+		offset = np.zeros([1,255])
+		for i in range(1,5):
+			self.ax1.annotate(str(ticks[i]),size=10, xy=(ticks[i], -15))
+			blah = self.ax1.plot(ticks[i],0, 'bo')
+
+			self.ax1.annotate(str(ticks[i]),size=10, xy=(5, ticks[i]))
+			blah = self.ax1.plot(0,ticks[i], 'bo')
+
+		bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
+		# self.annotation = self.ax1.annotate('init',size=20, xy=(100, 100), bbox = bbox_props)
+		self.annotation = plt.figtext(0.02, 0.9, 'rssi = ', size=20, alpha = 0.9, bbox = bbox_props)
+		self.Freq = plt.figtext(0.85, 0.85, 'freq = ???', size=10, alpha = 0.9, bbox = bbox_props)
+		self.Freq = plt.figtext(0.85, 0.9, 'Horizontal Plane', size=10, alpha = 0.9, bbox = bbox_props)
+
+		self.quiverLine = self.ax1.quiver(0,0,50,50,angles='xy',scale_units='xy',scale=1)
+		
+
+		self.ax1.set_aspect(1.)
+		self.ax1.set_xlim(-255, 255)
+		self.ax1.set_ylim(-255, 255)
+		
+
+		self.xdata = []
+		self.ydata = []
+		self.polarline, = self.ax1.plot(self.xdata,self.ydata)
+		# self.polarline.set_data([],[])
+
+		
+
 
 
 	def update(self, signalStrength, yaw):
 		U = signalStrength*cos(yaw*pi/180)
 		V = signalStrength*sin(yaw*pi/180)
+		self.xdata.append(U)
+		self.ydata.append(V)
+		# self.ax1.plot(self.xdata,self.ydata)
+		self.polarline.set_data(self.xdata,self.ydata)
 		self.quiverLine.set_UVC(U,V)
-		self.annotation.set_text(str(signalStrength))
-		self.annotation.xytext = (U+copysign(10,U),V+copysign(10,V))
+		self.annotation.set_text('rssi = ' + str(signalStrength))
 		plt.draw()
 
 
@@ -228,6 +266,8 @@ def main():
 	# 		if not line: 
 	# 			userInput = raw_input('receive data again? or else exit (y/n)\n')
 	# 			if userInput.lower() == 'y':
+	# 				polar.xdata = []
+	# 				polar.ydata = []
 	# 				nbytes = ser.write("tx".encode('ascii'))
 	# 			else:
 	# 				print 'exiting loop'
@@ -240,6 +280,9 @@ def main():
 
 
 
+
+
+	# DEBUGING CODE
 	sensor = ProcessData()
 	in_file = sys.argv[1]
 	with open(in_file) as in_f:

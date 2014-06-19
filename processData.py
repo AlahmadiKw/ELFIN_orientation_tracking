@@ -60,7 +60,7 @@ class ProcessData:
 		self.zMag /= norm
 
 	def computeAngles(self):
-		self.pitch = atan2(-self.xAcc, sqrt(pow(self.yAcc,2) + pow(self.zAcc,2)))
+		self.pitch = atan2(self.xAcc, sqrt(pow(self.yAcc,2) + pow(self.zAcc,2)))
 		self.roll  = atan2(self.yAcc, sqrt(pow(self.xAcc,2) + pow(self.zAcc,2)))
 		self.yaw   = atan2(self.yMag*cos(self.roll) + self.zMag*sin(self.roll),
 			         self.xMag*cos(self.pitch) + self.yMag*sin(self.pitch)*sin(self.roll) - self.zMag*cos(self.roll)*sin(self.pitch))
