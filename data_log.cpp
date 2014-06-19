@@ -106,14 +106,6 @@ void ledFlashTick(void);
 float mapData(float val, int in_min, int in_max, float out_min, float out_max);
 
 
-// function [ output ] = mapData( data, in_min, in_max, out_min, out_max)
-// %UNTITLED Summary of this function goes here
-// %   Detailed explanation goes here
-//  output = (data-in_min).* (out_max - out_min) / (in_max - in_min) + out_min;
-
-// end
-
-
 /////////////////////////////////////////////////////////////////////
 // main application
 int main()
@@ -155,20 +147,21 @@ int main()
         yaw= atan2( (-yMag*cos(roll) + zMag*sin(roll) ) , 
                     xMag*cos(pitch) + yMag*sin(pitch)*sin(roll) - zMag*cos(roll)*sin(pitch) )
              *180/M_PI;
+        // yaw = atan2((double)(yMag),(double)(xMag))*180/M_PI;
 
         serialSendSensorData();
         
         // Blink red LED (loop running)
         redLED = !redLED;
-        wait(0.01);
+        wait(0.05);
     }  
 }
 
 
 void serialSendSensorData(void)
 {
-    printf("%10f  %10f  %10f      \r\n", roll, pitch, yaw);
-    // printf("%10d  %10d  %10d\r\n", xMagRaw, yMagRaw, zMagRaw);
+    // printf("%10f  %10f\n", roll, pitch);
+    printf("%f,%f,%f,%f,%f,%f,%f,%f,%f\n", 1,2,3,xAccRaw, );
 }    
 
 
@@ -246,34 +239,34 @@ void processMag(){
     yMagRaw = mag.readVal(MAG_OUT_Y_MSB);
     zMagRaw = mag.readVal(MAG_OUT_Z_MSB);
 
-    xMagFiltered = xMagFilteredOld + alpha * (xMagRaw - xMagFilteredOld);
-    yMagFiltered = yMagFilteredOld + alpha * (yMagRaw - yMagFilteredOld);
-    zMagFiltered = zMagFilteredOld + alpha * (zMagRaw - zMagFilteredOld);
+    // xMagFiltered = xMagFilteredOld + alpha * (xMagRaw - xMagFilteredOld);
+    // yMagFiltered = yMagFilteredOld + alpha * (yMagRaw - yMagFilteredOld);
+    // zMagFiltered = zMagFilteredOld + alpha * (zMagRaw - zMagFilteredOld);
+    xMagFiltered = xMagRaw;
+    yMagFiltered = yMagRaw;
+    zMagFiltered = zMagRaw;
 
     xMagFilteredOld = xMagFiltered;
     yMagFilteredOld = yMagFiltered;
     zMagFilteredOld = zMagFiltered;
 
-    xMagMap = mapData(xMagFiltered, minXmag, maxXmag, -1, 1)   /1.0;
-    yMagMap = mapData(yMagFiltered, minYmag, maxYmag, -1, 1)   /1.0;
-    zMagMap = mapData(zMagFiltered, minZmag, maxZmag, -1, 1)   /1.0;
+    xMagFiltered -= (maxXmag-minXmag)/2;
+    yMagFiltered -= (maxYmag-minYmag)/2;
+    zMagFiltered -= (maxZmag-minZmag)/2;
 
-    magNor = sqrt( (xMagMap*xMagMap) + (yMagMap*yMagMap) + (zMagMap*zMagMap));
+    magNor = sqrt(pow(xMagFiltered,2)+pow(yMagFiltered,2)+pow(zMagFiltered,2));
 
-    xMagMap /= magNor;
-    yMagMap /= magNor;
-    zMagMap /= magNor;
 
-    xMag = xMagMap;
-    yMag = yMagMap;
-    zMag = zMagMap;
+    xMag = xMagFiltered/magNor;
+    yMag = yMagFiltered/magNor;
+    zMag = zMagFiltered/magNor;
 
         // recalibrate in case 
-    if (xMagFiltered>maxXmag) {maxXmag = xMagFiltered;}
-    if (yMagFiltered>maxYmag) {maxYmag = yMagFiltered;}
-    if (zMagFiltered>maxZmag) {maxZmag = zMagFiltered;}
+    // if (xMagFiltered>maxXmag) {maxXmag = xMagFiltered;}
+    // if (yMagFiltered>maxYmag) {maxYmag = yMagFiltered;}
+    // if (zMagFiltered>maxZmag) {maxZmag = zMagFiltered;}
 
-    if (xMagFiltered<minXmag) {minXmag = xMagFiltered;}
-    if (yMagFiltered<minYmag) {minYmag = yMagFiltered;}
-    if (zMagFiltered<minZmag) {minZmag = zMagFiltered;}
+    // if (xMagFiltered<minXmag) {minXmag = xMagFiltered;}
+    // if (yMagFiltered<minYmag) {minYmag = yMagFiltered;}
+    // if (zMagFiltered<minZmag) {minZmag = zMagFiltered;}
 }
