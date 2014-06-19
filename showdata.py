@@ -14,7 +14,19 @@ from time import sleep
 from collections import deque
 from matplotlib import pyplot as plt
 from processData import ProcessData
-from math import cos, sin, pi
+from math import cos, sin, pi, copysign
+
+import matplotlib.cbook as cbook
+
+from  mpl_toolkits.axisartist.grid_helper_curvelinear import GridHelperCurveLinear
+from mpl_toolkits.axisartist import Subplot
+
+from mpl_toolkits.axisartist import SubplotHost, \
+     ParasiteAxesAuxTrans
+
+import  mpl_toolkits.axisartist.angle_helper as angle_helper
+from matplotlib.projections import PolarAxes
+from matplotlib.transforms import Affine2D
 
 # class that holds analog data for N samples
 class AngLesbuf:
@@ -82,18 +94,80 @@ class PolarPlot:
 	''' plots heading angle and signal strength in polar coor '''
 	def __init__(self):
 		plt.ion()
-		plt.figure(num=2, figsize=(10,7))
-		plt.grid(b=True)
-		self.ax = plt.gca()
-		self.quiverLine = self.ax.quiver(0,0,100,100,angles='xy',scale_units='xy',scale=1)
-		self.ax.set_xlim([-150,150])
-		self.ax.set_ylim([-150,150])
+		self.fig = plt.figure(num=2, figsize=(10,7))
+		# plt.grid(b=True)
+		# self.ax = plt.gca()
+		# self.quiverLine = self.ax.quiver(0,0,100,100,angles='xy',scale_units='xy',scale=1)
+		# self.ax.set_xlim([-150,150])
+		# self.ax.set_ylim([-150,150])
+		# self.annotation = self.ax.annotate('init', xy=(100+5, 100+5))
+		    # PolarAxes.PolarTransform takes radian. However, we want our coordinate
+		# system in degree
+		tr = Affine2D().scale(np.pi/180., 1.) + PolarAxes.PolarTransform()
+
+		# polar projection, which involves cycle, and also has limits in
+		# its coordinates, needs a special method to find the extremes
+		# (min, max of the coordinate within the view).
+
+		# 20, 20 : number of sampling points along x, y direction
+		extreme_finder = angle_helper.ExtremeFinderCycle(50, 50,
+		                                                 lon_cycle = 360,
+		                                                 lat_cycle = None,
+		                                                 lon_minmax = None,
+		                                                 lat_minmax = (0, np.inf),
+		                                                 )
+
+		grid_locator1 = angle_helper.LocatorDMS(12)
+		# Find a grid values appropriate for the coordinate (degree,
+		# minute, second).
+
+		tick_formatter1 = angle_helper.FormatterDMS()
+		# And also uses an appropriate formatter.  Note that,the
+		# acceptable Locator and Formatter class is a bit different than
+		# that of mpl's, and you cannot directly use mpl's Locator and
+		# Formatter here (but may be possible in the future).
+
+		grid_helper = GridHelperCurveLinear(tr,
+		                                    extreme_finder=extreme_finder,
+		                                    grid_locator1=grid_locator1,
+		                                    tick_formatter1=tick_formatter1
+		                                    )
+
+		self.ax1 = SubplotHost(self.fig, 1, 1, 1, grid_helper=grid_helper)
+
+		# make ticklabels of right and top axis visible.
+		self.ax1.axis["right"].major_ticklabels.set_visible(True)
+		self.ax1.axis["top"].major_ticklabels.set_visible(True)
+		self.ax1.axis["left"].major_ticklabels.set_visible(True)
+
+		# let right axis shows ticklabels for 1st coordinate (angle)
+		self.ax1.axis["right"].get_helper().nth_coord_ticks=0
+		# let bottom axis shows ticklabels for 2nd coordinate (radius)
+		self.ax1.axis["bottom"].get_helper().nth_coord_ticks=0
+		self.ax1.axis["left"].get_helper().nth_coord_ticks=0
+		temp =  self.ax1.set_title('Signal strength & heading polar plots')
+		temp.set_y(1.05) 
+
+		self.fig.add_subplot(self.ax1)
+
+
+		self.quiverLine = self.ax1.quiver(0,0,50,50,angles='xy',scale_units='xy',scale=1)
+		bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
+		self.annotation = self.ax1.annotate('init',size=20, xy=(50+5, 50+5), bbox = bbox_props)
+
+		self.ax1.set_aspect(1.)
+		self.ax1.set_xlim(-150, 150)
+		self.ax1.set_ylim(-150, 150)
+
+		self.ax1.grid(True)
 
 
 	def update(self, signalStrength, yaw):
 		U = signalStrength*cos(yaw*pi/180)
 		V = signalStrength*sin(yaw*pi/180)
 		self.quiverLine.set_UVC(U,V)
+		self.annotation.set_text(str(signalStrength))
+		self.annotation.xytext = (U+copysign(10,U),V+copysign(10,V))
 		plt.draw()
 
 
