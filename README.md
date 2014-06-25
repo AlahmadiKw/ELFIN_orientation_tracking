@@ -1,4 +1,7 @@
 
+To run the script, you do need to install some packages. I think the easiest way to do so is [anaconda](http://continuum.io/downloads)
+ 
+
 ### Usage 
 
 <pre>
