@@ -281,6 +281,9 @@ def main():
 	if (not args.portname) and (not args.datafile):
 		print 'please specify either portname of data file (see python plotData.py -h for usage'
 		exit(1)
+	if (args.portname) and (args.datafile):
+		print 'you cant do both my dear'
+		exit(1)
 
 
 	print 'plotting data...'
