@@ -110,7 +110,7 @@ class PolarPlot:
 		                                                 lon_minmax = None,
 		                                                 lat_minmax = (0, np.inf),
 		                                                 )
-		grid_locator1 = angle_helper.LocatorDMS(24)
+		grid_locator1 = angle_helper.LocatorDMS(15)
 		tick_formatter1 = angle_helper.FormatterDMS()
 		# And also uses an appropriate formatter.  Note that,the
 		# acceptable Locator and Formatter class is a bit different than
@@ -321,8 +321,8 @@ def main():
 				if not line: 
 					userInput = raw_input('receive data again? or else exit (y/n)? ')
 					if userInput.lower() == 'y':
-						polar.xdata = []
-						polar.ydata = []
+						# polar.xdata = []
+						# polar.ydata = []
 						nbytes = ser.write("tx".encode('ascii'))
 					else:
 						print 'exiting loop'
@@ -332,6 +332,34 @@ def main():
 			except KeyboardInterrupt:
 				print 'exiting'
 				break
+
+	# -----DEBUG CODE------------
+		# polar = PolarPlot()
+		# lines = []
+		# with open('data2.txt') as f:
+		# 	for line in f: 
+		# 		# print line 
+		# 		try:
+		# 			data = [float(val) for val in line.split(',')]
+		# 			# print data
+		# 			if(len(data)==9):
+		# 				(pitch, roll, yaw) = sensor.process(data[3:len(data)])
+		# 				print 3*'%-10.2f' %(pitch,roll,yaw)
+		# 				signalStrength = data[0]
+		# 				# if flag:
+		# 				# 	angles.add([pitch, roll, yaw])
+		# 				# 	anglesPlot.update(angles)
+		# 				# else:
+		# 				polar.update(signalStrength, yaw)
+		# 				if out_file:
+		# 					fileline = ' '.join([str(val) for val in data])
+		# 					lines.append(fileline)
+		# 		except ValueError:
+		# 			pass
+	# ---END DEBUG CODE----------
+
+
+
 	# save data to output is user specifies output args 
 	if out_file:
 		lines = '\n'.join(lines)

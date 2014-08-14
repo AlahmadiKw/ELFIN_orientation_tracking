@@ -3,6 +3,7 @@ from math import *
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+from averagedSlots import *
 
 
 class ProcessData:
@@ -16,6 +17,9 @@ class ProcessData:
 		self.xMagFilteredOld = 0
 		self.yMagFilteredOld = 0
 		self.zMagFilteredOld = 0
+		self.pitch_ave = AveragedSlots()
+		self.roll_ave  = AveragedSlots()
+		self.yaw_ave   = AveragedSlots()
 
 	def filterData(self):
 		# filter Acc data 
@@ -76,9 +80,14 @@ class ProcessData:
 		self.xMag = rawData[3]
 		self.yMag = rawData[4]
 		self.zMag = rawData[5]
-		self.filterData()
+		# self.filterData()
 		self.normalizeData()
 		self.computeAngles()
+
+		self.pitch = self.pitch_ave.update(self.pitch)
+		self.roll = self.roll_ave.update(self.roll)
+		self.yaw = self.yaw_ave.update(self.yaw)
+
 		return (self.pitch, self.roll, self.yaw)
 
 if __name__ == '__main__':
