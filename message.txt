@@ -47,7 +47,7 @@ function do_5_deg_slot_average( x ):
 Here is an example output for a an angle x from 1 to 50 degrees 
 
 x   averaged_by_slots
-#######
+---------------------
 1 	1
 2 	1.5
 3 	2.0

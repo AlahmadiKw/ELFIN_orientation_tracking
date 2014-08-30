@@ -110,7 +110,7 @@ class PolarPlot:
 		                                                 lon_minmax = None,
 		                                                 lat_minmax = (0, np.inf),
 		                                                 )
-		grid_locator1 = angle_helper.LocatorDMS(15)
+		grid_locator1 = angle_helper.LocatorDMS(24)
 		tick_formatter1 = angle_helper.FormatterDMS()
 		# And also uses an appropriate formatter.  Note that,the
 		# acceptable Locator and Formatter class is a bit different than
@@ -261,16 +261,11 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--portname", help="for realtime: name of portname (com* for windows or /dev/tty.usbmodem* for mac)",
 	                    type=str)
-
 	parser.add_argument("--datafile", help="for offline: name of sensor data file to plot3d from",
 	                    type=str)
 
 	parser.add_argument("--output", help="save data to OUTPUT",
                     type=str)
-
-	parser.add_argument("--nodes", help="takes the fidelity of nodes desired",
-					type=int)
-
 	args = parser.parse_args()
 
 	out_file = ''
@@ -281,8 +276,7 @@ def main():
 	strPort = args.portname;
 
 	# initialize raw data processing 
-	fidelity = args.nodes if args.nodes else 5
-	sensor = ProcessData(fidelity)
+	sensor = ProcessData()
 
 	if (not args.portname) and (not args.datafile):
 		print 'please specify either portname of data file (see python plotData.py -h for usage'
@@ -299,58 +293,21 @@ def main():
 	# -----------------------------------------------------------
 	# open serial port
 	if strPort:
-		# ser = serial.Serial(port = strPort, baudrate = 9600, timeout= 2) 
-		# line = ser.readline()   # this is NEEDED before writing tx 
-		# nbytes = ser.write("tx".encode('ascii'))
+		ser = serial.Serial(port = strPort, baudrate = 9600, timeout= 2) 
+		line = ser.readline()   # this is NEEDED before writing tx 
+		nbytes = ser.write("tx".encode('ascii'))
 
-		# polar = PolarPlot()
-		# lines = []
-		# while True:
-		# 	try:
-		# 		if ser.readable(): 
-		# 			line = ser.readline()
-		# 			# print line 
-		# 			data = [float(val) for val in line.split(',')]
-		# 			# print data
-		# 			if(len(data)==9):
-		# 				(pitch, roll, yaw) = sensor.process(data[3:len(data)])
-		# 				signalStrength = data[0]
-		# 				# if flag:
-		# 				# 	angles.add([pitch, roll, yaw])
-		# 				# 	anglesPlot.update(angles)
-		# 				# else:
-		# 				polar.update(signalStrength, yaw)
-		# 				if out_file:
-		# 					fileline = ' '.join([str(val) for val in data])
-		# 					lines.append(fileline)
-		# 	except ValueError:
-		# 		if not line: 
-		# 			userInput = raw_input('receive data again? or else exit (y/n)? ')
-		# 			if userInput.lower() == 'y':
-		# 				# polar.xdata = []
-		# 				# polar.ydata = []
-		# 				nbytes = ser.write("tx".encode('ascii'))
-		# 			else:
-		# 				print 'exiting loop'
-		# 				break
-		# 		else: 
-		# 			print 'bad data', line
-		# 	except KeyboardInterrupt:
-		# 		print 'exiting'
-		# 		break
-
-	# -----DEBUG CODE------------
 		polar = PolarPlot()
 		lines = []
-		with open('data.txt') as f:
-			for line in f: 
-				# print line 
-				try:
+		while True:
+			try:
+				if ser.readable(): 
+					line = ser.readline()
+					# print line 
 					data = [float(val) for val in line.split(',')]
 					# print data
 					if(len(data)==9):
 						(pitch, roll, yaw) = sensor.process(data[3:len(data)])
-						print 3*'%-10.2f' %(pitch,roll,yaw)
 						signalStrength = data[0]
 						# if flag:
 						# 	angles.add([pitch, roll, yaw])
@@ -360,25 +317,26 @@ def main():
 						if out_file:
 							fileline = ' '.join([str(val) for val in data])
 							lines.append(fileline)
-				except ValueError:
-					pass
-	# ---END DEBUG CODE----------
-
-
-
+			except ValueError:
+				if not line: 
+					userInput = raw_input('receive data again? or else exit (y/n)? ')
+					if userInput.lower() == 'y':
+						polar.xdata = []
+						polar.ydata = []
+						nbytes = ser.write("tx".encode('ascii'))
+					else:
+						print 'exiting loop'
+						break
+				else: 
+					print 'bad data', line
+			except KeyboardInterrupt:
+				print 'exiting'
+				break
 	# save data to output is user specifies output args 
 	if out_file:
 		lines = '\n'.join(lines)
 		with open(out_file, 'w') as f:
 			f.writelines(lines)
-
-	if args.nodes:
-		with open('yaw.csv', 'w') as f:
-			f.writelines(str(sensor.yaw_ave))
-		with open('pitch.csv', 'w') as f:
-			f.writelines(str(sensor.pitch_ave))
-		with open('roll.csv', 'w') as f:
-			f.writelines(str(sensor.roll_ave))
 
 	# -----------------------------------------------------------
 	# 3D plotting
