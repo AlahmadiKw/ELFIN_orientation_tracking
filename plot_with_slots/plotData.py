@@ -1,9 +1,9 @@
 ################################################################################
 # plotData.py
 #
-# plots magnetometer data
+# plots magnetometer data 
 #
-#
+# 
 # real time waveform plotting is credited to electronut.in:
 # https://gist.github.com/electronut/5641933
 #
@@ -37,7 +37,6 @@ import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 
 
-
 class AngLesbuf:
 	""" saves new data to buffer for plotting angels waveform """
 	def __init__(self, maxLen):
@@ -66,7 +65,7 @@ class AnglesPlot:
 	""" plots anges in waveform """
 	def __init__(self, angles):
 		# set plot to animated
-		plt.ion()
+		plt.ion() 
 		plt.figure(num=1, figsize=(10,7))
 		plt.subplots_adjust(wspace=0.5)
 		plt.subplot(311)
@@ -100,8 +99,7 @@ class AnglesPlot:
 
 class PolarPlot:
 	''' plots heading angle and signal strength in polar coor in 2d'''
-	def __init__(self, axis_max=255):
-
+	def __init__(self):
 		plt.ion()
 		self.fig = plt.figure(num=2, figsize=(10,7))
 		tr = Affine2D().scale(np.pi/180., 1.) + PolarAxes.PolarTransform()
@@ -125,7 +123,7 @@ class PolarPlot:
 		                                    )
 
 		self.ax1 = SubplotHost(self.fig, 1, 1, 1, grid_helper=grid_helper)
-
+		
 		# make ticklabels of right and top axis visible.
 		self.ax1.axis["right"].major_ticklabels.set_visible(True)
 		self.ax1.axis["top"].major_ticklabels.set_visible(True)
@@ -137,7 +135,7 @@ class PolarPlot:
 		self.ax1.axis["bottom"].get_helper().nth_coord_ticks=0
 		self.ax1.axis["left"].get_helper().nth_coord_ticks=0
 		temp =  self.ax1.set_title('Signal strength & heading polar plots')
-		temp.set_y(1.05)
+		temp.set_y(1.05) 
 
 		self.ax1.grid(True)
 
@@ -154,9 +152,9 @@ class PolarPlot:
 		self.ax1.axhline(linewidth=2, color='blue')
 		self.ax1.axvline(linewidth=2, color='blue')
 
-		# label x and y axises manually
-		ticks = np.linspace(0, axis_max, 6)
-		offset = np.zeros([1,axis_max])
+		# label x and y axises manually 
+		ticks = np.linspace(0, 255, 6)
+		offset = np.zeros([1,255])
 		for i in range(1,5):
 			self.ax1.annotate(str(ticks[i]),size=10, xy=(ticks[i], -15))
 			blah = self.ax1.plot(ticks[i],0, 'bo')
@@ -164,19 +162,19 @@ class PolarPlot:
 			self.ax1.annotate(str(ticks[i]),size=10, xy=(5, ticks[i]))
 			blah = self.ax1.plot(0,ticks[i], 'bo')
 
-		# annotate figure
+		# annotate figure 
 		bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
 		# self.annotation = self.ax1.annotate('init',size=20, xy=(100, 100), bbox = bbox_props)
 		self.annotation = plt.figtext(0.02, 0.9, 'rssi = ', size=20, alpha = 0.9, bbox = bbox_props)
 		self.Freq = plt.figtext(0.85, 0.85, 'freq = ???', size=10, alpha = 0.9, bbox = bbox_props)
 		self.Freq = plt.figtext(0.85, 0.9, 'Horizontal Plane', size=10, alpha = 0.9, bbox = bbox_props)
 
-		# initialize arrow
-		self.quiverLine = self.ax1.quiver(0,0,50,50,angles='xy',scale_units='xy',scale=1)
+		# initialize arrow 
+		self.quiverLine = self.ax1.quiver(0,0,50,50,angles='xy',scale_units='xy',scale=1)		
 		self.ax1.set_aspect(1.)
-		self.ax1.set_xlim(-axis_max, axis_max)   # was 255
-		self.ax1.set_ylim(-axis_max, axis_max)
-
+		self.ax1.set_xlim(-255, 255)
+		self.ax1.set_ylim(-255, 255)
+		
 		# initialize mesh plot
 		self.xdata = []
 		self.ydata = []
@@ -214,11 +212,11 @@ class Polar3D():
 		self.Freq = plt.figtext(0.91, 0.85, 'freq = ???', size=10, alpha = 0.9, bbox = bbox_props)
 		self.Freq = plt.figtext(0.91, 0.9, 'Horizontal Plane', size=10, alpha = 0.9, bbox = bbox_props)
 
-		# quiver lines (there is no quiver 3d so I draw the vector manually
+		# quiver lines (there is no quiver 3d so I draw the vector manually 
 		# using plot of two points (0 to rho)
 		self.referencedir = np.array([1, 0, 0])
 		self.polarline, = self.ax.plot([0, self.referencedir[0]] , [0, self.referencedir[1]], [0, self.referencedir[2]], 'k', linewidth=2)
-		# since its a T shaped, these are the two smaller lines
+		# since its a T shaped, these are the two smaller lines 
 		self.wing1 = np.array([0, 1, 0])
 		self.wing2 = np.array([0, -1, 0])
 		self.polarline, = self.ax.plot([0, self.wing1[0]] , [0, self.wing1[1]], [0, self.wing1[2]], 'k', linewidth=2)
@@ -228,13 +226,13 @@ class Polar3D():
 		self.ydata = []
 		self.zdata = []
 		self.polarline2, = self.ax.plot(self.xdata,self.ydata, self.zdata, 'r')
-
+		
 	def update(self, rho, pitch, roll, yaw):
 		pitch *= pi/180
 		roll  *= pi/180
-		yaw   *= pi/180
+		yaw   *= pi/180 
 		# rotation matrix (wikipedia)
-		rotation_mat = np.array([[ cos(roll)*cos(yaw) ,  cos(pitch)*sin(yaw)+sin(pitch)*sin(roll)*cos(yaw), sin(pitch)*sin(yaw)-cos(pitch)*sin(roll)*cos(yaw)],
+		rotation_mat = np.array([[ cos(roll)*cos(yaw) ,  cos(pitch)*sin(yaw)+sin(pitch)*sin(roll)*cos(yaw), sin(pitch)*sin(yaw)-cos(pitch)*sin(roll)*cos(yaw)], 
 			      				 [ -cos(roll)*sin(yaw),  cos(pitch)*cos(yaw)-sin(pitch)*sin(roll)*sin(yaw), sin(pitch)*cos(yaw)+cos(pitch)*sin(roll)*sin(yaw)],
 			      				 [ sin(roll)          ,  -sin(pitch)*cos(roll)                            , cos(pitch)*cos(roll)]])
 		xyz = np.dot(rotation_mat,self.referencedir)
@@ -263,19 +261,11 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--portname", help="for realtime: name of portname (com* for windows or /dev/tty.usbmodem* for mac)",
 	                    type=str)
-
 	parser.add_argument("--datafile", help="for offline: name of sensor data file to plot3d from",
 	                    type=str)
 
 	parser.add_argument("--output", help="save data to OUTPUT",
                     type=str)
-
-	parser.add_argument("--nodes", help="takes the fidelity of nodes desired",
-					type=int)
-
-	parser.add_argument("--axislim", help="desired axis limits",
-					type=int)
-
 	args = parser.parse_args()
 
 	out_file = ''
@@ -285,9 +275,8 @@ def main():
 	#strPort = '/dev/tty.usbserial-A7006Yqh'
 	strPort = args.portname;
 
-	# initialize raw data processing
-	fidelity = args.nodes if args.nodes else 5
-	sensor = ProcessData(fidelity)
+	# initialize raw data processing 
+	sensor = ProcessData()
 
 	if (not args.portname) and (not args.datafile):
 		print 'please specify either portname of data file (see python plotData.py -h for usage'
@@ -304,20 +293,17 @@ def main():
 	# -----------------------------------------------------------
 	# open serial port
 	if strPort:
-		ser = serial.Serial(port = strPort, baudrate = 9600, timeout= 2)
-		line = ser.readline()   # this is NEEDED before writing tx
+		ser = serial.Serial(port = strPort, baudrate = 9600, timeout= 2) 
+		line = ser.readline()   # this is NEEDED before writing tx 
 		nbytes = ser.write("tx".encode('ascii'))
 
-		if args.axislim:
-			polar = PolarPlot(args.axislim)
-		else:
-			polar = PolarPlot()
+		polar = PolarPlot()
 		lines = []
 		while True:
 			try:
-				if ser.readable():
+				if ser.readable(): 
 					line = ser.readline()
-					# print line
+					# print line 
 					data = [float(val) for val in line.split(',')]
 					# print data
 					if(len(data)==9):
@@ -332,7 +318,7 @@ def main():
 							fileline = ' '.join([str(val) for val in data])
 							lines.append(fileline)
 			except ValueError:
-				if not line:
+				if not line: 
 					userInput = raw_input('receive data again? or else exit (y/n)? ')
 					if userInput.lower() == 'y':
 						# polar.xdata = []
@@ -341,21 +327,18 @@ def main():
 					else:
 						print 'exiting loop'
 						break
-				else:
+				else: 
 					print 'bad data', line
 			except KeyboardInterrupt:
 				print 'exiting'
 				break
 
 	# -----DEBUG CODE------------
-		# if args.axislim:
-		# 	polar = PolarPlot(args.axislim)
-		# else:
-		# 	polar = PolarPlot()
+		# polar = PolarPlot()
 		# lines = []
-		# with open('data.txt') as f:
-		# 	for line in f:
-		# 		# print line
+		# with open('data2.txt') as f:
+		# 	for line in f: 
+		# 		# print line 
 		# 		try:
 		# 			data = [float(val) for val in line.split(',')]
 		# 			# print data
@@ -377,45 +360,33 @@ def main():
 
 
 
-	# save data to output is user specifies output args
+	# save data to output is user specifies output args 
 	if out_file:
 		lines = '\n'.join(lines)
 		with open(out_file, 'w') as f:
 			f.writelines(lines)
-
-
 
 	# -----------------------------------------------------------
 	# 3D plotting
 	# -----------------------------------------------------------
 	if args.datafile:
 		polar = Polar3D()
-		sensor = ProcessData(fidelity)
+		sensor = ProcessData()
 		in_file = args.datafile
 		with open(in_file) as in_f:
-			for line in in_f:
+			for line in in_f: 
 				try:
-					line.strip('\r\n')
-					data = [float(val) for val in line.split()]
+					data = [float(val) for val in line.split(',')]
 					if(len(data)==9):
 						(pitch, roll, yaw) = sensor.process(data[3:len(data)])
 						signalStrength = data[0]
 						polar.update(signalStrength, pitch, roll, yaw)
 				except ValueError:
-					print 'bogus data', line
+					print 'bogus data', line 
 				except (KeyboardInterrupt,SystemExit):
 					print 'exiting'
 					# plt.close('all')
 					break
-
-	if args.nodes:
-		with open('yaw.csv', 'w') as f:
-			f.writelines(str(sensor.yaw_ave))
-		with open('pitch.csv', 'w') as f:
-			f.writelines(str(sensor.pitch_ave))
-		with open('roll.csv', 'w') as f:
-			f.writelines(str(sensor.roll_ave))
-
 
 	plt.show(block=True)
 
